@@ -1,0 +1,31 @@
+# Website Competitor Scanner - Dependencies
+
+# Web Framework
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+python-multipart>=0.0.6
+
+# HTTP Client
+aiohttp>=3.9.1
+curl_cffi>=0.6.0
+
+# HTML/Content Processing
+beautifulsoup4==4.14.3
+lxml==6.0.2
+readability-lxml==0.8.4.1
+tldextract>=5.1.0
+
+# JavaScript Rendering (Playwright)
+playwright>=1.40.0
+
+# LLM Integration
+litellm>=1.0.0
+openai>=1.0.0
+
+# Document Processing
+pypdf>=3.17.0
+python-docx>=1.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+pydantic>=2.0.0
