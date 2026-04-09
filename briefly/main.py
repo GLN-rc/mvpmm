@@ -152,7 +152,6 @@ async def detect_branding(blog_url: str = Form(...)):
         }
 
     except Exception as e:
-        print(f"Branding detection error: {e}")
         return {
             "status": "error",
             "company_name": None,
@@ -168,6 +167,8 @@ async def generate(
     brand_docs: List[UploadFile] = File(default=[]),
     brand_config_json: str = Form(default=""),
     logo: Optional[UploadFile] = File(default=None),
+    pull_quote: str = Form(default=""),
+    pull_quote_attribution: str = Form(default=""),
 ):
     """
     Main endpoint. Accepts blog URL + optional brand docs (multiple allowed).
@@ -235,9 +236,6 @@ async def generate(
         logo_file_path = custom_brand["logo_file"]
         if os.path.exists(logo_file_path):
             logo_path = logo_file_path
-            print(f"✓ Using logo from branding file: {logo_path}")
-        else:
-            print(f"⚠ Logo file specified in branding JSON not found: {logo_file_path}")
 
     # If no logo from JSON, try uploaded logo
     if not logo_path and logo and logo.filename:
@@ -252,7 +250,6 @@ async def generate(
             tmp_logo.flush()
             tmp_logo.close()
             logo_path = tmp_logo.name
-            print(f"✓ Using uploaded logo: {logo_path}")
         except Exception as e:
             try:
                 os.unlink(tmp_logo.name)
@@ -353,7 +350,8 @@ async def generate(
     # ── 6. Generate PDF with custom branding ────────────────────────────────
     extracted["blog_url"] = blog_data.get("url", "")
     try:
-        pdf_bytes = generate_pdf(extracted, brand_config=merged_brand if merged_brand else None, page_preference=pages)
+        pdf_bytes = generate_pdf(extracted, brand_config=merged_brand if merged_brand else None, page_preference=pages,
+                                 pull_quote=pull_quote.strip(), pull_quote_attribution=pull_quote_attribution.strip())
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"PDF generation failed: {str(e)}")
 

@@ -48,6 +48,21 @@
                         </div>
                         <small>Choose between a concise 2-page or detailed 3-page format</small>
                     </div>
+
+                    <!-- Optional pull quote -->
+                    <div class="form-group" style="margin-top: var(--spacing-lg);">
+                        <label for="pullQuote">Short quote <span class="label-hint">optional — a line from your post to feature in a callout box</span></label>
+                        <textarea id="pullQuote" name="pullQuote" maxlength="200" rows="3"
+                                  placeholder="e.g. The data was already there — we just needed to stop asking people to find it themselves."></textarea>
+                        <small><span id="pullQuoteCount">0</span>/200</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="pullQuoteAttribution" id="pullQuoteAttrLabel">Attribution <span class="label-hint">max 80 characters</span></label>
+                        <input type="text" id="pullQuoteAttribution" name="pullQuoteAttribution"
+                               maxlength="80" placeholder="— Jane Smith, Head of Product"
+                               disabled style="opacity: 0.4;">
+                        <small><span id="pullQuoteAttrCount">0</span>/80</small>
+                    </div>
                 </section>
 
                 <!-- Step 2: Messaging Materials -->

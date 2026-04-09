@@ -226,6 +226,7 @@ body::before {
 .form-group input[type="text"],
 .form-group input[type="email"],
 .form-group input[type="file"],
+.form-group textarea,
 .form-group select {
     width: 100%;
     padding: var(--spacing-md) var(--spacing-md);
@@ -241,6 +242,7 @@ body::before {
 .form-group input[type="url"]:focus,
 .form-group input[type="text"]:focus,
 .form-group input[type="email"]:focus,
+.form-group textarea:focus,
 .form-group select:focus {
     outline: none;
     border-color: var(--primary);

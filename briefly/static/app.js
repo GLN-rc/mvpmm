@@ -128,6 +128,28 @@ document.querySelectorAll('input[name="pagePreference"]').forEach(radio => {
 updateHeaderStyleVisibility();
 
 // ────────────────────────────────────────────────────────────────
+// PULL QUOTE CHARACTER COUNTER
+// ────────────────────────────────────────────────────────────────
+
+document.getElementById('pullQuote')?.addEventListener('input', function () {
+    document.getElementById('pullQuoteCount').textContent = this.value.length;
+    const attrInput = document.getElementById('pullQuoteAttribution');
+    if (this.value.trim().length > 0) {
+        attrInput.removeAttribute('disabled');
+        attrInput.style.removeProperty('opacity');
+    } else {
+        attrInput.setAttribute('disabled', '');
+        attrInput.value = '';
+        attrInput.style.setProperty('opacity', '0.4');
+        document.getElementById('pullQuoteAttrCount').textContent = '0';
+    }
+});
+
+document.getElementById('pullQuoteAttribution')?.addEventListener('input', function () {
+    document.getElementById('pullQuoteAttrCount').textContent = this.value.length;
+});
+
+// ────────────────────────────────────────────────────────────────
 // LOGO PREVIEW BACKGROUND — mirrors the logo bg radio selection
 // ────────────────────────────────────────────────────────────────
 
@@ -363,6 +385,7 @@ form.addEventListener('submit', async (e) => {
         return;
     }
 
+
     // Show loading
     loadingOverlay.classList.remove('hidden');
     statusSection.classList.add('hidden');
@@ -390,6 +413,10 @@ form.addEventListener('submit', async (e) => {
         // Get branding config
         const brandingConfig = getBrandingConfigFromForm();
         formData.append('brand_config_json', JSON.stringify(brandingConfig));
+
+        // Pull quote (optional)
+        formData.append('pull_quote', document.getElementById('pullQuote')?.value?.trim() || '');
+        formData.append('pull_quote_attribution', document.getElementById('pullQuoteAttribution')?.value?.trim() || '');
 
         // API call
         const response = await fetch('/api/generate', {
@@ -598,6 +625,15 @@ function resetForm() {
     Object.keys(hexDisplays).forEach((key) => {
         hexDisplays[key].textContent = colorInputs[key].value.toUpperCase();
     });
+
+    // Reset pull quote counters and attribution state
+    document.getElementById('pullQuoteCount').textContent = '0';
+    document.getElementById('pullQuoteAttrCount').textContent = '0';
+    const attrInput = document.getElementById('pullQuoteAttribution');
+    if (attrInput) {
+        attrInput.setAttribute('disabled', '');
+        attrInput.style.setProperty('opacity', '0.4');
+    }
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -610,3 +646,8 @@ function showStatus(type, message) {
     statusSection.classList.remove('hidden');
     loadingOverlay.classList.add('hidden');
 }
+
+// ────────────────────────────────────────────────────────────────
+// INIT
+// ────────────────────────────────────────────────────────────────
+updateLogoPreviewBg();

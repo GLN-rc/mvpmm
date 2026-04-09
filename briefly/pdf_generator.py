@@ -282,11 +282,15 @@ def _normalize_text(text: str) -> str:
         return text
     # First, normalize all hyphen variants to regular hyphen (-)
     # This handles en-dash, em-dash, non-breaking hyphen, etc.
-    text = text.replace('–', '-')  # en-dash
-    text = text.replace('—', '-')  # em-dash
-    text = text.replace('‐', '-')  # hyphen
-    text = text.replace('−', '-')  # minus sign
-    text = text.replace('\u00ad', '-')  # soft hyphen
+    text = text.replace('–', '-')    # en-dash U+2013
+    text = text.replace('—', '-')    # em-dash U+2014
+    text = text.replace('‐', '-')    # hyphen U+2010
+    text = text.replace('\u2011', '-')  # non-breaking hyphen U+2011
+    text = text.replace('\u2012', '-')  # figure dash U+2012
+    text = text.replace('\u2015', '-')  # horizontal bar U+2015
+    text = text.replace('−', '-')    # minus sign U+2212
+    text = text.replace('\u00ad', '')   # soft hyphen — remove (used as line-break hint)
+    text = text.replace('\u00a0', ' ')  # non-breaking space → regular space
     # Unicode subscript digits → plain digits (built-in fonts like Times-Roman
     # only cover Latin-1, so U+2080-U+2089 render as ■ without this mapping)
     _sub = str.maketrans('₀₁₂₃₄₅₆₇₈₉', '0123456789')
@@ -610,9 +614,11 @@ def _draw_header_texture(c, header_y: float, brand: BrandConfig, seed_str: str =
 
     # ── Geometric (current default) ───────────────────────────────────────────
     if pattern == "geometric":
-        a1 = min(0.18, 0.07 * alpha_mul)
-        a2 = min(0.14, 0.05 * alpha_mul)
-        a3 = min(0.30, 0.14 * alpha_mul)
+        # Use separate values for light vs dark background — dark needs higher alpha to show
+        if bg_is_light:
+            a1, a2, a3 = 0.22, 0.17, 0.30
+        else:
+            a1, a2, a3 = 0.24, 0.18, 0.32
         c.setFillColor(Color(ov2.red, ov2.green, ov2.blue, alpha=a1))
         c.circle(W - 0.5 * inch, header_y + HEADER_H * 0.5, 1.05 * inch, stroke=0, fill=1)
         c.setFillColor(Color(ov1.red, ov1.green, ov1.blue, alpha=a2))
@@ -939,6 +945,119 @@ def _draw_logo_with_background(c, logo_path: str, brand: BrandConfig, x: float, 
     except Exception as e:
         import traceback
         traceback.print_exc()
+
+# ── Pull quote box ─────────────────────────────────────────────────────────────
+
+_QUOTE_BOX_W_RATIO  = 0.30   # fraction of CONTENT_W
+_QUOTE_TEXT_W_RATIO = 0.65   # fraction of CONTENT_W for adjacent text column
+_QUOTE_GAP_RATIO    = 0.05   # gap between text column and box
+_QUOTE_BORDER_W     = 4      # pt — left accent border
+_QUOTE_PAD_H        = 0.14 * inch
+_QUOTE_PAD_INNER_H  = 0.10 * inch   # top gap after quote mark
+
+def _pull_quote_metrics(quote_text: str, box_w: float):
+    """
+    Return (font_sz, leading, lines, box_height) for the given quote text and box width.
+    Tries 10pt then 9pt; chooses whichever first keeps wrapping to ≤ 6 lines.
+    box_height includes all padding and the opening quote mark glyph.
+    """
+    border_w  = _QUOTE_BORDER_W
+    pad_left  = 0.12 * inch + border_w
+    pad_right = 0.12 * inch
+    inner_w   = box_w - pad_left - pad_right
+
+    q_mark_sz = 24
+    q_mark_h  = q_mark_sz * 0.75
+
+    chosen_sz    = 10.0
+    chosen_lead  = 15.0
+    chosen_lines = []
+    for sz in [10.0, 9.0]:
+        lead  = sz * 1.5
+        lines = _wrap_by_width(quote_text, inner_w, "Times-Italic", sz)
+        chosen_sz    = sz
+        chosen_lead  = lead
+        chosen_lines = lines
+        if len(lines) <= 6:
+            break
+
+    text_h   = len(chosen_lines) * chosen_lead
+    box_h    = (_QUOTE_PAD_H + q_mark_h + _QUOTE_PAD_INNER_H +
+                text_h + _QUOTE_PAD_H)
+    return chosen_sz, chosen_lead, chosen_lines, box_h
+
+
+def _draw_pull_quote_box(c, quote_text: str, attribution: str,
+                          x: float, y_top: float, box_w: float,
+                          brand: BrandConfig) -> float:
+    """
+    Draw the pull quote sidebar box. Top of box is at y_top.
+    Returns y at the bottom of the box.
+    """
+    font_sz, leading, lines, box_h = _pull_quote_metrics(quote_text, box_w)
+
+    border_w  = _QUOTE_BORDER_W
+    pad_left  = 0.12 * inch + border_w
+    pad_right = 0.12 * inch
+    q_mark_sz = 24
+
+    # Attribution height — pre-calculate wrapped lines so box is sized correctly
+    attr_lines = []
+    attr_line_h = 8 * 1.4   # 8pt text at 1.4 leading
+    attr_h = 0
+    if attribution:
+        attr_inner_w = box_w - pad_left - pad_right
+        attr_lines = _wrap_by_width(attribution, attr_inner_w, _font("OpenSans"), 8)
+        attr_h = 5 + len(attr_lines) * attr_line_h + 8   # gap above + lines + bottom pad
+
+    total_h = box_h + attr_h
+    box_y   = y_top - total_h   # bottom-left y of the box rectangle
+
+    # Background
+    c.setFillColor(HexColor("#F5F3F0"))
+    c.setLineWidth(0)
+    c.rect(x, box_y, box_w, total_h, stroke=0, fill=1)
+
+    # Left accent border
+    c.setFillColor(_hex_to_color(brand.accent))
+    c.rect(x, box_y, border_w, total_h, stroke=0, fill=1)
+
+    # Opening quote mark
+    q_mark_x = x + pad_left
+    q_mark_y = y_top - _QUOTE_PAD_H - q_mark_sz * 0.75
+    c.setFont(_font("Poppins-Bold"), q_mark_sz)
+    c.setFillColor(_hex_to_color(brand.accent))
+    c.drawString(q_mark_x, q_mark_y, "\u201c")
+
+    # Quote text (Times-Italic, always available)
+    text_y = q_mark_y - _QUOTE_PAD_INNER_H
+    c.setFont("Times-Italic", font_sz)
+    c.setFillColor(_hex_to_color(brand.text_dark))
+    inner_x = x + pad_left
+    for ln in lines:
+        c.drawString(inner_x, text_y, ln)
+        text_y -= leading
+
+    # Closing quote mark — flush-right, vertically aligned with last text line
+    # Shift baseline down so the 24pt glyph's visual weight sits at the last text line
+    last_line_y = text_y + leading - (q_mark_sz - font_sz) * 0.45
+    inner_right  = x + box_w - pad_right
+    c.setFont(_font("Poppins-Bold"), q_mark_sz)
+    close_mark_w = pdfmetrics.stringWidth("\u201d", _font("Poppins-Bold"), q_mark_sz)
+    close_x = inner_right - close_mark_w
+    c.setFillColor(_hex_to_color(brand.accent))
+    c.drawString(close_x, last_line_y, "\u201d")
+
+    # Attribution — use pre-calculated lines
+    if attr_lines:
+        attr_y = text_y - 5
+        c.setFont(_font("OpenSans"), 8)
+        c.setFillColor(_hex_to_color(brand.secondary))
+        for al in attr_lines:
+            c.drawString(inner_x, attr_y, al)
+            attr_y -= attr_line_h
+
+    return box_y   # y at bottom of box
 
 # ── Footer — full-bleed navy band ──────────────────────────────────────────────
 
@@ -1307,7 +1426,8 @@ def _render_narrow_band(c, brand: BrandConfig):
 
 # ── Main generate function ─────────────────────────────────────────────────────
 
-def generate_pdf(data: dict, image_paths: Optional[dict] = None, brand_config: Optional[dict] = None, page_preference: int = 2) -> bytes:
+def generate_pdf(data: dict, image_paths: Optional[dict] = None, brand_config: Optional[dict] = None, page_preference: int = 2,
+                 pull_quote: str = "", pull_quote_attribution: str = "") -> bytes:
     """
     Generate PDF with custom branding.
 
@@ -1331,10 +1451,13 @@ def generate_pdf(data: dict, image_paths: Optional[dict] = None, brand_config: O
     if page_preference == 3:
         return _generate_3page_pdf(data, image_paths, brand)
     else:
-        return _generate_2page_pdf(data, image_paths, brand)
+        return _generate_2page_pdf(data, image_paths, brand,
+                                   pull_quote=pull_quote,
+                                   pull_quote_attribution=pull_quote_attribution)
 
 
-def _generate_2page_pdf(data: dict, image_paths: Optional[dict], brand: BrandConfig) -> bytes:
+def _generate_2page_pdf(data: dict, image_paths: Optional[dict], brand: BrandConfig,
+                        pull_quote: str = "", pull_quote_attribution: str = "") -> bytes:
     """Generate 2-page PDF template."""
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=letter)
@@ -1438,6 +1561,20 @@ def _generate_2page_pdf(data: dict, image_paths: Optional[dict], brand: BrandCon
     _read_btn_clearance = 0.75 * BODY_LEADING + 6 + 0.12 * inch  # ~26pt
     bottom_p2 = _bp2_box_h + _read_btn_clearance
 
+    # Pre-compute pull quote box dimensions once (if provided)
+    _pq_text   = pull_quote.strip()
+    _pq_attr   = pull_quote_attribution.strip()
+    _pq_box_w  = CONTENT_W * _QUOTE_BOX_W_RATIO
+    _pq_text_w = CONTENT_W * _QUOTE_TEXT_W_RATIO
+    _pq_gap    = CONTENT_W * _QUOTE_GAP_RATIO
+    _pq_box_x  = MARGIN + _pq_text_w + _pq_gap
+    _pq_used   = False   # only draw once, on the first eligible section
+
+    if _pq_text:
+        _, _, _, _pq_box_h = _pull_quote_metrics(_pq_text, _pq_box_w)
+        if _pq_attr:
+            _pq_box_h += 9 * 1.4 + 5
+
     for idx, section in enumerate(sections):
         hdr  = section.get("header", "")
         body = section.get("body", "")
@@ -1470,19 +1607,47 @@ def _generate_2page_pdf(data: dict, image_paths: Optional[dict], brand: BrandCon
                 pass
 
         if body:
-            avail     = y - bottom_p2
-            ml        = max(4, int(avail / BODY_LEADING))
-            all_lines = _wrap_by_width(body, CONTENT_W, _font(brand.font_body), BODY_FONT_SZ)
-            render_n  = min(ml, len(all_lines))
-            # If truncating, backtrack to last sentence-ending line
-            if render_n < len(all_lines):
-                for i in range(render_n, 0, -1):
-                    if all_lines[i - 1].rstrip().endswith(('.', '!', '?')):
-                        render_n = i
-                        break
-            y = _draw_text_block(c, MARGIN, y, CONTENT_W, ' '.join(all_lines[:render_n]),
-                                 _font(brand.font_body), BODY_FONT_SZ, BODY_LEADING, _hex_to_color(brand.text_dark),
-                                 max_lines=render_n)
+            # ── Side-by-side pull quote layout (first eligible section only) ──
+            use_quote = (
+                _pq_text and
+                not _pq_used and
+                (y - bottom_p2) >= max(1.5 * inch, _pq_box_h)
+            )
+            if use_quote:
+                _pq_used = True
+                # Text column — narrower width
+                avail    = y - bottom_p2
+                ml       = max(4, int(avail / BODY_LEADING))
+                all_lines = _wrap_by_width(body, _pq_text_w, _font(brand.font_body), BODY_FONT_SZ)
+                render_n  = min(ml, len(all_lines))
+                if render_n < len(all_lines):
+                    for i in range(render_n, 0, -1):
+                        if all_lines[i - 1].rstrip().endswith(('.', '!', '?')):
+                            render_n = i
+                            break
+                text_y_end = _draw_text_block(
+                    c, MARGIN, y, _pq_text_w, ' '.join(all_lines[:render_n]),
+                    _font(brand.font_body), BODY_FONT_SZ, BODY_LEADING,
+                    _hex_to_color(brand.text_dark), max_lines=render_n)
+                # Quote box — right side, top aligned with text start
+                box_y_end = _draw_pull_quote_box(
+                    c, _pq_text, _pq_attr, _pq_box_x, y, _pq_box_w, brand)
+                # Advance y past whichever element is taller
+                y = min(text_y_end, box_y_end)
+            else:
+                # ── Normal full-width layout ──────────────────────────────────
+                avail     = y - bottom_p2
+                ml        = max(4, int(avail / BODY_LEADING))
+                all_lines = _wrap_by_width(body, CONTENT_W, _font(brand.font_body), BODY_FONT_SZ)
+                render_n  = min(ml, len(all_lines))
+                if render_n < len(all_lines):
+                    for i in range(render_n, 0, -1):
+                        if all_lines[i - 1].rstrip().endswith(('.', '!', '?')):
+                            render_n = i
+                            break
+                y = _draw_text_block(c, MARGIN, y, CONTENT_W, ' '.join(all_lines[:render_n]),
+                                     _font(brand.font_body), BODY_FONT_SZ, BODY_LEADING,
+                                     _hex_to_color(brand.text_dark), max_lines=render_n)
         y -= 0.06 * inch  # small gap between sections (pre-header gap handles visual separation)
 
     # "Read the full article" link — styled as button
