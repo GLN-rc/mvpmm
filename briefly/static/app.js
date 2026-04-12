@@ -113,10 +113,33 @@ logoFile.addEventListener('change', (e) => {
 
 function updateHeaderStyleVisibility() {
     const pageVal = document.querySelector('input[name="pagePreference"]:checked')?.value || '2';
+    const is3page = pageVal === '3';
+
+    // Header style — disabled on 3-page
     const headerStyleRow = document.querySelector('.branding-top-row .form-row-full');
     if (headerStyleRow) {
-        headerStyleRow.style.opacity = pageVal === '3' ? '0.35' : '';
-        headerStyleRow.style.pointerEvents = pageVal === '3' ? 'none' : '';
+        headerStyleRow.style.opacity = is3page ? '0.35' : '';
+        headerStyleRow.style.pointerEvents = is3page ? 'none' : '';
+    }
+
+    // Pull quote section — 2-page only
+    const pullQuoteSection = document.getElementById('pullQuoteSection');
+    if (pullQuoteSection) {
+        pullQuoteSection.style.opacity = is3page ? '0.35' : '';
+        pullQuoteSection.style.pointerEvents = is3page ? 'none' : '';
+        const textarea = document.getElementById('pullQuote');
+        const attrInput = document.getElementById('pullQuoteAttribution');
+        if (is3page) {
+            if (textarea) textarea.setAttribute('disabled', '');
+            if (attrInput) attrInput.setAttribute('disabled', '');
+        } else {
+            if (textarea) textarea.removeAttribute('disabled');
+            // attribution re-enable is controlled by the quote input listener
+            if (attrInput && (!textarea || textarea.value.trim().length === 0)) {
+                attrInput.setAttribute('disabled', '');
+                attrInput.style.setProperty('opacity', '0.4');
+            }
+        }
     }
 }
 

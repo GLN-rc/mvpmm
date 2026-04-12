@@ -1461,6 +1461,7 @@ def _generate_2page_pdf(data: dict, image_paths: Optional[dict], brand: BrandCon
     """Generate 2-page PDF template."""
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=letter)
+    c._doc.info.producer = 'briefly — github.com/nicole-os/mvpmm'
 
     title        = data.get("title", "Executive Brief")
     subtitle     = data.get("subtitle", "")
@@ -1658,13 +1659,13 @@ def _generate_2page_pdf(data: dict, image_paths: Optional[dict], brand: BrandCon
     read_y = y - WHITE_SPACE_LINES  # Button positioned closer to section content
 
     if blog_url:
-        label = "READ THE FULL ARTICLE \u2192"
+        label = "READ THE FULL ARTICLE"
 
         # Draw button background (accent color)
         btn_padding_x = 0.15 * inch
         btn_padding_y = 6
         font_sz = 10.5
-        label_width = len(label) * font_sz * 0.5
+        label_width = pdfmetrics.stringWidth(label, _font("OpenSans-Bold"), font_sz)
         btn_w = label_width + btn_padding_x * 2
         btn_x = MARGIN  # LEFT-ALIGNED
         btn_y = read_y - btn_padding_y
@@ -1710,6 +1711,7 @@ def _generate_3page_pdf(data: dict, image_paths: Optional[dict], brand: BrandCon
     """
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=letter)
+    c._doc.info.producer = 'briefly — github.com/nicole-os/mvpmm'
 
     # Extract data
     title           = data.get("title", "Executive Brief")
@@ -2318,11 +2320,11 @@ def _render_3page_page3(c, sections, continuing_content, conclusion,
 
     # ── "Read the full article" button — close to content, above FAQ ────────
     if blog_url:
-        label     = "READ THE FULL ARTICLE \u2192"
+        label     = "READ THE FULL ARTICLE"
         btn_sz    = 10.5
         btn_pad_x = 0.15 * inch
         c.setFont(_font("OpenSans-Bold"), btn_sz)
-        lw = c.stringWidth(label, _font("OpenSans-Bold"), btn_sz)
+        lw = pdfmetrics.stringWidth(label, _font("OpenSans-Bold"), btn_sz)
         bw = lw + btn_pad_x * 2
         bh = read_btn_h
         bx = MARGIN

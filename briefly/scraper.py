@@ -65,6 +65,15 @@ async def fetch_blog(url: str) -> dict:
         print(f"Fast fetch error: {e} — trying Playwright fallback")
 
     # ── Playwright fallback: real headless Chrome ──────────────────────────────
+    # Trigger if: HTTP failed, OR fast path returned suspiciously thin content (JS-rendered page)
+    _thin_threshold = 100  # words — below this suggests nav-only / JS-rendered
+
+    if html is not None:
+        _quick_soup = BeautifulSoup(html, "lxml")
+        _quick_text = _extract_main_text(_quick_soup)
+        if len(_quick_text.split()) < _thin_threshold:
+            html = None  # force Playwright retry
+
     if html is None:
         try:
             html, final_url = await _fetch_with_playwright(url)
@@ -165,8 +174,19 @@ def _extract_main_text(soup: BeautifulSoup) -> str:
     # Class stripping must happen after, or a wrapper div with a class like
     # "related" or "banner" could wipe out the entire article body.
     content = None
-    for selector in ["article", "main", '[role="main"]', ".post-content",
-                      ".entry-content", ".article-body", ".blog-content", "#content"]:
+    for selector in [
+        # Semantic / explicit
+        "article", "main", '[role="main"]',
+        # Common CMS class names (exact)
+        ".post-content", ".entry-content", ".article-body",
+        ".blog-content", ".story-content", ".news-content",
+        ".page-content", ".article-content", "#content", "#main-content",
+        # Partial-match fallbacks — catch sites with class names like
+        # "wt-news-content", "post__body", "article-wrapper", etc.
+        '[class*="article"]', '[class*="story"]',
+        '[class*="post-body"]', '[class*="entry"]',
+        '[class*="content"]',
+    ]:
         content = soup.select_one(selector)
         if content and len(content.get_text(strip=True)) > 200:
             break

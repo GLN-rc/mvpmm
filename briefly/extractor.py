@@ -152,6 +152,7 @@ async def extract_brief(
 - All text: no em dashes (use - or :), no smart quotes, use straight quotes only.
 - Forbidden words/phrases: NEVER use: "landscape", "digital landscape", "cybersecurity landscape", "threat landscape", "today's landscape", or ANY phrase of the form "[adjective] landscape" (e.g. "evolving landscape", "complex landscape", "modern landscape"). Also forbidden: "ever-evolving", "rapidly evolving", "rapidly changing", "rapidly changing [x] environment", "evolving threat", "vague", "paradigm shift", "game changer", "best practices", "at the end of the day", "at scale", "stakeholders", "synergy", "leverage", "empower". Write with specific, concrete language instead.
 - Humanize content: Use specific examples, data, names, and concrete scenarios instead of abstract jargon. Replace corporate speak with plain, direct statements.
+- Dates and times: If the blog mentions an event with a specific date or time, you MUST include the actual date (e.g. "April 15, 2026") and time in at least one takeaway or FAQ answer. Never use relative terms like "this Saturday", "next week", or "tomorrow" — always convert to the specific date if it can be inferred from the article.
 - IMPORTANT: Write to fill the page. Thin, short content defeats the purpose of the brief."""
 
     extra_rules_3page = (
