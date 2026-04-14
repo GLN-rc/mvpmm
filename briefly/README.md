@@ -16,7 +16,10 @@ cd mvpmm/briefly
 bash setup.sh
 ```
 
-The setup script handles everything: pip dependencies, the Playwright browser binary, and a `.env` template. Open `.env` and add your OpenAI API key, then:
+The setup script handles everything: pip dependencies, the Playwright browser binary, and a `.env` template. 
+Open the env in any text editor, replace sk-your-key-here with your real OpenAI API key.
+
+Then, run the app:
 
 ```bash
 python3 run.py
@@ -42,7 +45,14 @@ python3 -m playwright install chromium
 
 ### 3. Add your OpenAI API key
 ```
-OPENAI_API_KEY=sk-...
+Create a file called .env in the briefly folder. Open it in any text editor and add this line:
+
+OPENAI_API_KEY=sk-your-actual-key-here
+
+Replace sk-your-actual-key-here with your real key. You can find it at platform.openai.com → API keys.
+This file stays on your machine and is never committed to git.
+
+
 ```
 
 ### 4. Run
